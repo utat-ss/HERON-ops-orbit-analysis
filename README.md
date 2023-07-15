@@ -17,12 +17,15 @@ It's still in development.
   - On linux, GCC should already be installed by default
   - On Windows, install [MSVC](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019)
 
-### Install
+### Installation
 
-```bash
-pip install git+https://github.com/utat-ss/hermes
-```
+1. Clone the repo and open a terminal in the resository root
+2. Make a virtual environment (optional)
+3. Run `pip install -e .`
 
 The installation script will automatically compile the C extension.
 
 That's it! You're ready to go.
+
+### Usage
+Still working on an actual API, but for now, open `mission.py`, fill in your initial state vector etc., and run the script to get a list of imaging windows.
