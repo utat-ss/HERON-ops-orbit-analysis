@@ -15,5 +15,8 @@ dependencies = [
     "supernova-cffi @ git+https://github.com/utat-ss/supernova",
 ]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
 [project.urls]
 homepage = "https://github.com/utat-ss/hermes"

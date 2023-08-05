@@ -11,3 +11,4 @@ TORONTO_GS = toronto = GroundLocation(
 
 HERON_NORTH_OCCLUSION_ANGLE = 5  # deg
 HERON_SOUTH_OCCLUSION_ANGLE = 55  # deg
+GM = 3.986004418e14  # m^3/s^2
