@@ -1,4 +1,4 @@
-from hermes.tle.structures import TLE
+from hermes.tle import TLE
 import pytest
 import numpy as np
 
@@ -27,6 +27,4 @@ def test_tle_end_to_end():
 
     new_tle = TLE.from_cartesian_state(*cart, tle, 2021, 35.51324206)
 
-    print(new_tle.tle_string)
-
-    assert new_tle.tle_string == sample_tle
+    assert new_tle.tle_string == tuple(sample_tle)

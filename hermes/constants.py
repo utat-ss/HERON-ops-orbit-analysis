@@ -1,5 +1,5 @@
-from celest.coordinates import GroundLocation
 from celest import units as u
+from celest.coordinates import GroundLocation
 
 TORONTO_GS = toronto = GroundLocation(
     latitude=43.6532,

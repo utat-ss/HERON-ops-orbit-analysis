@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
+
+import numpy as np
+from celest import units as u
+from celest.coordinates import GCRS, ITRS, Coordinate, GroundLocation
+from celest.encounter import generate_vtws
 from celest.satellite import Satellite
 from celest.time import Time
-from celest.coordinates import Coordinate, GroundLocation, GCRS, ITRS
-from celest.encounter import generate_vtws
-from celest import units as u
-import numpy as np
 
 from hermes.constants import (
-    TORONTO_GS,
     HERON_NORTH_OCCLUSION_ANGLE,
     HERON_SOUTH_OCCLUSION_ANGLE,
+    TORONTO_GS,
 )
-from datetime import datetime
 
 
 def jd2000_to_datetime(jd2000: u.Quantity) -> datetime:

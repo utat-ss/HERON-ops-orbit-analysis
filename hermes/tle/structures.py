@@ -1,31 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import SimpleNamespace
+
 import numpy as np
-from .keplerian_orbit import KeplerianElements
+from trajectorize._c_extension import lib
+from trajectorize.orbit.conic_kepler import KeplerianElements, KeplerianOrbit
+
 from hermes.constants import GM
+from .converters import (
+    line_checksum,
+    parse_decimal,
+    parse_float,
+    print_decimal,
+    print_float,
+)
 
-
-def _parse_decimal(s):
-    """Parse a floating point with implicit leading dot.
-
-    >>> _parse_decimal('378')
-    0.378
-    """
-    return float("." + s)
-
-
-def _parse_float(s):
-    """Parse a floating point with implicit dot and exponential notation.
-
-    >>> _parse_float(' 12345-3')
-    0.00012345
-    >>> _parse_float('+12345-3')
-    0.00012345
-    >>> _parse_float('-12345-3')
-    -0.00012345
-    """
-    return float(s[0] + "." + s[1:6] + "e" + s[6:8])
+EARTH = SimpleNamespace(mu=GM)
 
 
 @dataclass
@@ -37,39 +28,6 @@ class TLE:
 
     All the attributes parsed from the TLE are expressed in the same units that
     are used in the TLE format.
-
-    :ivar str norad:
-        NORAD catalog number (https://en.wikipedia.org/wiki/Satellite_Catalog_Number).
-    :ivar str classification:
-        'U', 'C', 'S' for unclassified, classified, secret.
-    :ivar str int_desig:
-        International designator (https://en.wikipedia.org/wiki/International_Designator),
-    :ivar int epoch_year:
-        Year of the epoch.
-    :ivar float epoch_day:
-        Day of the year plus fraction of the day.
-    :ivar float dn_o2:
-        First time derivative of the mean motion divided by 2.
-    :ivar float ddn_o6:
-        Second time derivative of the mean motion divided by 6.
-    :ivar float bstar:
-        BSTAR coefficient (https://en.wikipedia.org/wiki/BSTAR).
-    :ivar int set_num:
-        Element set number.
-    :ivar float inc:
-        Inclination.
-    :ivar float raan:
-        Right ascension of the ascending node.
-    :ivar float ecc:
-        Eccentricity.
-    :ivar float argp:
-        Argument of perigee.
-    :ivar float M:
-        Mean anomaly.
-    :ivar float n:
-        Mean motion.
-    :ivar int rev_num:
-        Revolution number.
     """
 
     # NORAD catalog number (https://en.wikipedia.org/wiki/Satellite_Catalog_Number)
@@ -107,12 +65,12 @@ class TLE:
             epoch_year=actual_year,
             epoch_day=float(line1[20:32]),
             dn_o2=float(line1[33:43]),
-            ddn_o6=_parse_float(line1[44:52]),
-            bstar=_parse_float(line1[53:61]),
+            ddn_o6=parse_float(line1[44:52]),
+            bstar=parse_float(line1[53:61]),
             set_num=int(line1[64:68]),
             inc=float(line2[8:16]),
             raan=float(line2[17:25]),
-            ecc=_parse_decimal(line2[26:33]),
+            ecc=parse_decimal(line2[26:33]),
             argp=float(line2[34:42]),
             M=float(line2[43:51]),
             n=float(line2[52:63]),
@@ -121,7 +79,7 @@ class TLE:
 
     @property
     def epoch(self) -> np.datetime64:
-        """Epoch of the TLE, as an :class:`astropy.time.Time` object."""
+        """Epoch of the TLE, as a numpy datetime64 object."""
         if not hasattr(self, "_epoch"):
             year = np.datetime64(self.epoch_year - 1970, "Y")
             day = np.timedelta64(int((self.epoch_day - 1) * 86400 * 10**6), "us")
@@ -136,17 +94,22 @@ class TLE:
         """
         # Get missing orbital elements
         a = (GM / (self.n * 2 * np.pi / 86400) ** 2) ** (1 / 3)
+        true_anomaly = lib.theta_from_M(np.deg2rad(self.M), self.ecc)
 
         keplerian_elements = KeplerianElements(
-            a,
-            self.ecc,
-            np.deg2rad(self.inc),
-            np.rad2deg(self.raan),
-            np.deg2rad(self.argp),
-            np.deg2rad(self.M),
+            semi_major_axis=a,
+            eccentricity=self.ecc,
+            inclination=np.deg2rad(self.inc),
+            longitude_of_ascending_node=np.deg2rad(self.raan),
+            argument_of_periapsis=np.deg2rad(self.argp),
+            true_anomaly=true_anomaly,
+            epoch=0,
         )
+        orbit = KeplerianOrbit(keplerian_elements, EARTH)
 
-        return keplerian_elements.inertial_state()
+        sv = orbit.state_vector
+
+        return (sv.position, sv.velocity)
 
     @property
     def tle_string(self) -> tuple[str, str]:
@@ -156,8 +119,13 @@ class TLE:
             else self.epoch_year - 1900
         )
 
-        line_1 = f"""1 {self.norad}{self.classification} {self.int_desig} {epoch_yr}{self.epoch_day:012.8f}  .00000000  00000-0  {self.bstar:5.4e} 0    00"""
-        line_2 = f"""2 {self.norad} {self.inc:8.4f} {self.raan:8.4f} {self.ecc:7.7f} {self.argp:8.4f} {self.M:8.4f} {self.n:11.8f}{self.rev_num:5d}0"""
+        line_1 = f"""1 {self.norad}{self.classification} {self.int_desig} {epoch_yr}{self.epoch_day:012.8f}  {f'{self.dn_o2:.8f}'[1:]}  {print_float(self.ddn_o6)}  {print_float(self.bstar)} 0  {self.set_num}"""
+        line_2 = f"""2 {self.norad} {self.inc:8.4f} {self.raan:8.4f} {print_decimal(self.ecc)} {self.argp:8.4f} {self.M:8.4f} {self.n:11.8f}{self.rev_num:5d}"""
+
+        # compute checksums
+        line_1 += str(line_checksum(line_1))
+        line_2 += str(line_checksum(line_2))
+
         return line_1, line_2
 
     @classmethod
@@ -186,7 +154,10 @@ class TLE:
         epoch_day_frac : float
             Day of the year plus fraction of the day
         """
-        ke = KeplerianElements.from_cartesian(r_eci, v_eci)
+        orbit = KeplerianOrbit.from_state_vector(r_eci, v_eci, 0, EARTH)
+        ke = orbit.ke
+
+        mean_motion = 86400 / orbit.T
 
         return cls(
             norad=dummy_tle.norad,
@@ -198,11 +169,35 @@ class TLE:
             ddn_o6=dummy_tle.ddn_o6,
             bstar=dummy_tle.bstar,
             set_num=dummy_tle.set_num,
-            inc=np.rad2deg(ke.i),
-            raan=np.rad2deg(ke.raan),
-            ecc=ke.e,
-            argp=np.rad2deg(ke.argp),
-            M=np.rad2deg(ke.M),
-            n=ke.mean_motion,
+            inc=np.rad2deg(ke.inclination),
+            raan=np.rad2deg(ke.longitude_of_ascending_node),
+            ecc=ke.eccentricity,
+            argp=np.rad2deg(ke.argument_of_periapsis),
+            M=np.rad2deg(lib.M_from_theta(ke.true_anomaly, ke.eccentricity)),
+            n=mean_motion,
             rev_num=dummy_tle.rev_num,
+        )
+
+    @classmethod
+    def null_tle(cls):
+        """
+        TLE filled with null values, can be used as a dummy TLE
+        """
+        return cls(
+            norad="00000",
+            classification="U",
+            int_desig="        ",
+            epoch_year=0,
+            epoch_day=0,
+            dn_o2=0,
+            ddn_o6=0,
+            bstar=0,
+            set_num=0,
+            inc=0,
+            raan=0,
+            ecc=0,
+            argp=0,
+            M=0,
+            n=0,
+            rev_num=0,
         )
