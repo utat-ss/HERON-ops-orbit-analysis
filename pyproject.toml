@@ -8,12 +8,16 @@ description = "Mission analysis for HERON"
 readme = "README.md"
 requires-python = ">=3.8,<3.11"
 license = { text = "MIT" }
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
     "numpy",
     "celest==1.0.0",
+    "trajectorize @ git+https://github.com/itchono/trajectorize",
     "supernova-cffi @ git+https://github.com/utat-ss/supernova",
 ]
+
+[project.optional-dependencies]
+test = ["pytest"]
 
 [project.urls]
 homepage = "https://github.com/utat-ss/hermes"
