@@ -23,3 +23,6 @@ test = ["pytest"]
 
 [project.urls]
 homepage = "https://github.com/utat-ss/hermes"
+
+[tool.setuptools]
+packages = ["hermes"]
