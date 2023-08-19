@@ -40,6 +40,14 @@ SPACETRACK_EMAIL=<your email>
 SPACETRACK_PASSWORD=<your password>
 ```
 
-### Usage
+## Usage
+There are two demo scripts which show off the functionality of Hermes:
 
-Still working on an actual API, but for now, open `mission.py`, fill in your initial state vector etc., and run the script to get a list of imaging windows.
+### `demos/propagate_and_analyze_heron.py`
+This script propagates the HERON orbit for 50 days, starting from an initial state vector. It plots the orbit, initial/final TLEs, and finds times when the spacecraft is in view of the ground station.
+
+### `demos/pull_tle_from_spacetrack.py`
+This script finds the latest TLE for the ISS. Make sure to set your Space-Track credentials first!
+
+### Remaining functionality
+If you need something custom, there are probably bits and pieces in the existing codebase that may suit your needs. Take a look, and get in touch if you need something specific.
