@@ -10,8 +10,7 @@ from celest.satellite import Satellite
 from celest.time import Time
 
 from hermes.constants import (
-    HERON_NORTH_OCCLUSION_ANGLE,
-    HERON_SOUTH_OCCLUSION_ANGLE,
+    TORONTO_GS_OCCULSION_ANGLE,
     TORONTO_GS,
 )
 
@@ -79,8 +78,7 @@ def process_encounters(
     y: np.ndarray,
     jd_0: float,
     cutoff_angles: list[float] = [
-        HERON_NORTH_OCCLUSION_ANGLE,
-        HERON_SOUTH_OCCLUSION_ANGLE,
+        TORONTO_GS_OCCULSION_ANGLE,
     ],
     location: GroundLocation = TORONTO_GS,
 ) -> None:

@@ -9,6 +9,5 @@ TORONTO_GS = toronto = GroundLocation(
     length_unit=u.m,
 )
 
-HERON_NORTH_OCCLUSION_ANGLE = 5  # deg
-HERON_SOUTH_OCCLUSION_ANGLE = 55  # deg
+TORONTO_GS_OCCULSION_ANGLE = 45  # deg
 GM = 3.986004418e14  # m^3/s^2
